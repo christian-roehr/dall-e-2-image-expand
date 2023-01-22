@@ -5,7 +5,7 @@ from PIL import Image
 from io import BytesIO
 import openai
 
-def expand(image, prompt, factor, target_size=1024):
+def expand(image, prompt, factor, halign, valign, target_size=1024):
 
     # Let's require at least 20% expansion in each dimension
     factor = max(1.2, factor)
@@ -20,7 +20,8 @@ def expand(image, prompt, factor, target_size=1024):
 
     # Create a new target sized transparent image and paste the original into it
     buf = Image.new("RGBA", (target_size, target_size), color='#00000000')
-    buf.paste(image, box=(int(0.5*(target_size - new_width)), int(0.5*(target_size - new_height))))
+    buf.paste(image, box=(int(halign*(target_size - new_width)),
+                          int(valign*(target_size - new_height))))
     byte_stream = BytesIO()
     buf.save(byte_stream, format='PNG')
     byte_array = byte_stream.getvalue()
@@ -41,10 +42,15 @@ if __name__ == "__main__":
     parser.add_argument('-p', dest='prompt', required=True)
     parser.add_argument('-i', dest='image', required=True)
     parser.add_argument('-f', dest='factor', type=float, default=2.0)
+    parser.add_argument('-H', dest='halign', type=float, default=0.5,
+                        help="Relative horizontal alignment of the original image inside the output image")
+    parser.add_argument('-V', dest='valign', type=float, default=0.5,
+                        help="Relative vertical alignment of the original image inside the output image")
     args = parser.parse_args()
 
     openai.api_key = os.getenv("OPENAI_API_KEY")
 
     with Image.open(args.image) as image:
-        expanded_image = expand(image, args.prompt, factor=args.factor)
+        expanded_image = expand(image, args.prompt, factor=args.factor,
+                                halign=args.halign, valign=args.valign)
 
